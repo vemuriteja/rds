@@ -7,7 +7,7 @@
     managed_policy:
       - arn:aws:iam::aws:policy/AmazonS3FullAccess
 - name: Wait for 30 Seconds for IAM role to be created
-  shell: sleep 3
+  shell: sleep 30
 - name: Create SecurityGroup
   ec2_group:
     name: Instance-sg
@@ -18,6 +18,10 @@
       - proto: tcp
         from_port: 22
         to_port: 22
+        cidr_ip: 10.0.0.0/8
+      - proto: tcp
+        from_port: 8080
+        to_port: 8080
         cidr_ip: 10.0.0.0/8
   register: sgid
 - name: Create EC2 Instance
