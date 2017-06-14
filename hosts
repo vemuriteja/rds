@@ -1,5 +1,4 @@
 [ubuntu]
-#34.223.213.244 ansible_connection=ssh ansible_ssh_private_key_file=/root/sudheer-gluster-key.pem
 localhost ansible_connection=local
 [redhat]
 localhost ansible_connection=local
