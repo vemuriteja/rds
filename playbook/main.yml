@@ -1,0 +1,7 @@
+---
+- hosts: ubuntu
+  remote_user: ubuntu
+  become: yes
+  roles:
+#      - {role: oracle}
+      - {role: redhat}

@@ -1,0 +1,42 @@
+---
+- name: example ec2 group
+  ec2_group:
+    name: rds-sg
+    description: RDS Security Group
+    vpc_id: "{{ VPC_ID }}"
+    region: "{{ REGION }}"
+    rules:
+      - proto: tcp
+        from_port: 1521
+        to_port: 1521
+        cidr_ip: 10.0.0.0/8
+  register: sg
+
+- name: Create RDS Subnet Group
+  rds_subnet_group:
+    state: present
+    region: "{{ REGION }}"
+    name: private-db-subnet-group 
+    description: Oracle RDS DB SUbnet Groups
+    subnets:
+      - subnet-8bf49eee
+      - subnet-6a04dd31
+
+- name: Create RDS
+  rds:
+    command: create
+    instance_name: oracle-test
+    db_engine: oracle-se1
+    license_model: license-included
+    size: 10
+    region: "{{ REGION }}"
+    instance_type: db.t2.micro
+    multi_zone: no
+    username: oracle_admin
+    password: admin123
+    subnet: private-db-subnet-group
+    db_name: testdb
+    maint_window: Sun:22:00-Sun:23:15
+    publicly_accessible: no
+    vpc_security_groups: "{{ sg.group_id }}"
+    backup_window: "21:00-21:30"

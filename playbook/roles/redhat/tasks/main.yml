@@ -1,0 +1,67 @@
+---
+- name: Create an IAM role
+  iam_role:
+    name: s3fs-instance-profile
+    assume_role_policy_document: "{{ lookup('file','policy.json') }}"
+    state: present
+    managed_policy:
+      - arn:aws:iam::aws:policy/AmazonS3FullAccess
+- name: Wait for 30 Seconds for IAM role to be created
+  shell: sleep 3
+- name: Create SecurityGroup
+  ec2_group:
+    name: Instance-sg
+    description: Instance Security Group
+    vpc_id: "{{ VPC_ID }}"
+    region: "{{ REGION }}"
+    rules:
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 10.0.0.0/8
+  register: sgid
+- name: Create EC2 Instance
+  ec2:
+    key_name: teja
+    instance_type: t2.small
+    image: ami-b63769a1
+    count: 1
+    vpc_subnet_id: subnet-8bf49eee
+    assign_public_ip: yes
+    instance_profile_name: s3fs-instance-profile
+    region: "{{ REGION }}"
+    group_id: "{{ sgid.group_id }}"
+    instance_tags:
+      Name: "Test"
+      Environment: "RNT"
+      ExpirationDate: "2017-06-13"
+      Owner: "Teja"
+      Project: "Prod2"
+    
+    user_data: |
+               #!/bin/bash
+               yum install gcc libstdc++-devel gcc-c++ curl-devel libxml2-devel openssl-devel mailcap -y
+               yum install automake fuse fuse-devel gcc-c++ git libcurl-devel libxml2-devel make openssl-devel -y
+               yum install zip unzip git wget -y
+               wget https://github.com/libfuse/libfuse/releases/download/fuse-3.0.0/fuse-3.0.0.tar.gz
+               tar xzf fuse-3.0.0.tar.gz;cd fuse-3.0.0
+               ./configure --prefix=/usr/local
+               make && make install
+               export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;cd
+               git clone https://github.com/s3fs-fuse/s3fs-fuse.git
+               cd s3fs-fuse/;./autogen.sh;./configure
+               make;make install
+               cp /usr/local/bin/s3fs /usr/bin/
+               mkdir /mount
+               echo "s3fs#basetemplates  /mount     fuse    defaults,noatime,allow_other,use_cache=/tmp,default_acl=public-read,iam_role=auto 0 0" >> /etc/fstab
+               mount -a
+               yum install apr apr-devel apr-util apr-util-devel apr-util-ldap elinks krb5-workstation mailcap -y
+               cd /
+               wget http://download.jboss.org/wildfly/10.1.0.Final/wildfly-10.1.0.Final.zip
+               unzip wildfly-10.1.0.Final.zip
+               wget --no-cookies  --no-check-certificate  --header "Cookie: oraclelicense=accept-securebackup-cookie"  "http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.rpm" -O jdk-8-linux-x64.rpm
+               yum install jdk-8-linux-x64.rpm -y
+               mv wildfly-10.1.0.Final /opt/wildfly
+               sed -i 's/jboss.bind.address:127.0.0.1/jboss.bind.address:0.0.0.0/g' /opt/wildfly/standalone/configuration/standalone.xml
+               sed -i 's/jboss.bind.address.management:127.0.0.1/jboss.bind.address:0.0.0.0/g' /opt/wildfly/standalone/configuration/standalone.xml
+               cd /opt/;./wildfly/bin/standalone.sh &
