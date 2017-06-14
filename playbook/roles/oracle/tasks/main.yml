@@ -1,5 +1,5 @@
 ---
-- name: example ec2 group
+- name: create RDS secturity group
   ec2_group:
     name: rds-sg
     description: RDS Security Group
